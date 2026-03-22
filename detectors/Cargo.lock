@@ -165,6 +165,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "promise_chain"
+version = "0.1.0"
+dependencies = [
+ "llvm-sys",
+ "near_core",
+]
+
+[[package]]
 name = "promise_result"
 version = "0.1.0"
 dependencies = [

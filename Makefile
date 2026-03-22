@@ -71,7 +71,7 @@ get-packages-name:
 	@$(PYTHON) ./utils/getPackagesName.py
 
 analysis: unsafe-math round reentrancy div-before-mul transfer timestamp promise-result upgrade-func self-transfer prepaid-gas unhandled-promise yocto-attach complex-loop \
-	state-change-before-call unchecked-promise-result missing-owner-check \
+	state-change-before-call unchecked-promise-result missing-owner-check promise-chain \
 	tautology unused-ret inconsistency lock-callback non-callback-private non-private-callback incorrect-json-type
 
 callback: tg_ir
@@ -303,6 +303,16 @@ missing-owner-check: tg_ir
 	fi  # ]]
 	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/missing_owner_check {}
 
+promise-chain: tg_ir
+	@rm -f ${TMP_DIR}/.$@.tmp
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p promise_chain -q
+	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
+	else \
+		echo -e "\e[31m[!] Source not found\e[0m" ; \
+	fi  # ]]
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/promise_chain {}
+
 nep%-interface: tg_ir
 	@rm -f ${TMP_DIR}/.nep$*-interface.tmp
 	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p nep_interface -q
@@ -434,6 +444,9 @@ audit: promise-result reentrancy transfer timestamp div-before-mul unsafe-math r
 
 audit-report:
 	@$(PYTHON) ./utils/audit.py ${NEAR_SRC_DIR}
+
+audit-report-sarif:
+	@$(PYTHON) ./utils/sarif.py ${NEAR_SRC_DIR}
 
 clean: clean_pass clean_example clean_tg
 clean_pass:

@@ -29,6 +29,7 @@ members = [
     "state_change_before_call",
     "unchecked_promise_result",
     "missing_owner_check",
+    "promise_chain",
 ]
 resolver = "2"
 
