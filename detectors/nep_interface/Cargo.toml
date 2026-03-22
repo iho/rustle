@@ -1,0 +1,13 @@
+[package]
+name = "nep_interface"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "nep_interface"
+path = "src/main.rs"
+
+[dependencies]
+near_core = { path = "../near_core" }
+llvm-sys = "211"
+regex = "1"

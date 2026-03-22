@@ -1,0 +1,33 @@
+[workspace]
+members = [
+    "near_core",
+    "all_call",
+    "callback",
+    "div_before_mul",
+    "ext_call",
+    "ext_call_trait",
+    "nft_approval_check",
+    "nft_owner_check",
+    "prepaid_gas",
+    "promise_result",
+    "reentrancy",
+    "round",
+    "self_transfer",
+    "storage_gas",
+    "timestamp",
+    "transfer",
+    "unclaimed_storage_fee",
+    "unhandled_promise",
+    "unregistered_receiver",
+    "unsafe_math",
+    "unsaved_changes",
+    "upgrade_func",
+    "yocto_attach",
+    "nep_interface",
+    "complex_loop",
+    "struct_member",
+]
+resolver = "2"
+
+[profile.release]
+opt-level = 3

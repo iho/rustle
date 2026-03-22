@@ -1,0 +1,12 @@
+[package]
+name = "unsafe_math"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "unsafe_math"
+path = "src/main.rs"
+
+[dependencies]
+near_core = { path = "../near_core" }
+llvm-sys = "211"

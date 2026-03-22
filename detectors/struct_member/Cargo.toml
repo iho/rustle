@@ -1,0 +1,12 @@
+[package]
+name = "struct_member"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "struct_member"
+path = "src/main.rs"
+
+[dependencies]
+near_core = { path = "../near_core" }
+llvm-sys = "211"

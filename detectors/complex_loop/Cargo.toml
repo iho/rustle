@@ -1,0 +1,12 @@
+[package]
+name = "complex_loop"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "complex_loop"
+path = "src/main.rs"
+
+[dependencies]
+near_core = { path = "../near_core" }
+llvm-sys = "211"

@@ -1,0 +1,9 @@
+[package]
+name = "near_core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+llvm-sys = "211"
+regex = "1"
+libc = "0.2"

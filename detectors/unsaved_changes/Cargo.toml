@@ -1,0 +1,12 @@
+[package]
+name = "unsaved_changes"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "unsaved_changes"
+path = "src/main.rs"
+
+[dependencies]
+near_core = { path = "../near_core" }
+llvm-sys = "211"

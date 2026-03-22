@@ -1,0 +1,12 @@
+[package]
+name = "yocto_attach"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "yocto_attach"
+path = "src/main.rs"
+
+[dependencies]
+near_core = { path = "../near_core" }
+llvm-sys = "211"
