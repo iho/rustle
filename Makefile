@@ -71,6 +71,7 @@ get-packages-name:
 	@$(PYTHON) ./utils/getPackagesName.py
 
 analysis: unsafe-math round reentrancy div-before-mul transfer timestamp promise-result upgrade-func self-transfer prepaid-gas unhandled-promise yocto-attach complex-loop \
+	state-change-before-call unchecked-promise-result \
 	tautology unused-ret inconsistency lock-callback non-callback-private non-private-callback incorrect-json-type
 
 callback: tg_ir
@@ -271,6 +272,26 @@ unsaved-changes: tg_ir
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
 	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/unsaved_changes {}
+
+state-change-before-call: tg_ir
+	@rm -f ${TMP_DIR}/.$@.tmp
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p state_change_before_call -q
+	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
+	else \
+		echo -e "\e[31m[!] Source not found\e[0m" ; \
+	fi  # ]]
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/state_change_before_call {}
+
+unchecked-promise-result: tg_ir
+	@rm -f ${TMP_DIR}/.$@.tmp
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p unchecked_promise_result -q
+	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
+	else \
+		echo -e "\e[31m[!] Source not found\e[0m" ; \
+	fi  # ]]
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/unchecked_promise_result {}
 
 nep%-interface: tg_ir
 	@rm -f ${TMP_DIR}/.nep$*-interface.tmp

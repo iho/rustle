@@ -26,6 +26,8 @@ members = [
     "nep_interface",
     "complex_loop",
     "struct_member",
+    "state_change_before_call",
+    "unchecked_promise_result",
 ]
 resolver = "2"
 

@@ -57,6 +57,8 @@ unimplemented_interface_list = list()  # func
 unclaimed_storage_fee_set = set()  # func, check
 nft_approval_check_set = set()  # func, check
 nft_owner_check_set = set()  # func, check
+state_change_before_call_set = set()  # func, file, line
+unchecked_promise_result_set = set()  # func, file, line
 
 
 # deadcode_set = set()
@@ -310,6 +312,24 @@ try:
         for line in f:
             func, file, line = line.strip().split("@")
             unsaved_changes_set.add((func, file, int(line)))
+except Exception as e:
+    if PRINT_LOG_NOT_FOUND:
+        print("Tmp log not found: ", e)
+
+try:
+    with open(TMP_PATH + "/.state-change-before-call.tmp", "r") as f:
+        for line in f:
+            func, file, line = line.strip().split("@")
+            state_change_before_call_set.add((func, file, int(line)))
+except Exception as e:
+    if PRINT_LOG_NOT_FOUND:
+        print("Tmp log not found: ", e)
+
+try:
+    with open(TMP_PATH + "/.unchecked-promise-result.tmp", "r") as f:
+        for line in f:
+            func, file, line = line.strip().split("@")
+            unchecked_promise_result_set.add((func, file, int(line)))
 except Exception as e:
     if PRINT_LOG_NOT_FOUND:
         print("Tmp log not found: ", e)
@@ -605,6 +625,22 @@ for path in tqdm(getFiles(PROJ_PATH, ignoreTest=True, ignoreMock=True)):
         for func_string, func_path, func_line in unsaved_changes_set:
             if structFuncNameMatch(func_string, func["struct"], func["struct_trait"], func_name, path, func_path):
                 note_high += ("" if hasPrint else "unsaved changes to map(s) at <") + "L" + str(func_line) + " "
+                hasPrint = True
+        if hasPrint:
+            note_high = note_high.rstrip() + ">; "
+
+        hasPrint = False
+        for func_string, func_path, func_line in state_change_before_call_set:
+            if structFuncNameMatch(func_string, func["struct"], func["struct_trait"], func_name, path, func_path):
+                note_high += ("" if hasPrint else "state change before call at <") + "L" + str(func_line) + " "
+                hasPrint = True
+        if hasPrint:
+            note_high = note_high.rstrip() + ">; "
+
+        hasPrint = False
+        for func_string, func_path, func_line in unchecked_promise_result_set:
+            if structFuncNameMatch(func_string, func["struct"], func["struct_trait"], func_name, path, func_path):
+                note_high += ("" if hasPrint else "unchecked promise result at <") + "L" + str(func_line) + " "
                 hasPrint = True
         if hasPrint:
             note_high = note_high.rstrip() + ">; "

@@ -72,6 +72,22 @@ pub fn promise_result() -> &'static Regex {
     })
 }
 
+/// Matches `env::promise_result` and `env::promise_results_count` (access without check).
+pub fn promise_result_access() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        re(r"near_sdk[0-9]+environment[0-9]+env[0-9]+(promise_result|promise_results_count)[0-9]+")
+    })
+}
+
+/// Matches `is_promise_success` and `promise_result_as_success` (the check).
+pub fn promise_result_check() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        re(r"near_sdk[0-9]+utils[0-9]+(is_promise_success|promise_result_as_success)[0-9]+")
+    })
+}
+
 pub fn partial_eq() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| re(r"core\.\.cmp\.\.PartialEq"))
