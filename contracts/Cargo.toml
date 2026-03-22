@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "amm",
+    "nft-marketplace",
+    "staking",
+]
+resolver = "2"
