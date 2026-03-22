@@ -11,9 +11,12 @@ RUN apt-get update
 # tools for Rustle
 RUN apt-get install -y wget gnupg2
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/keyrings/llvm.asc
-RUN echo "deb [signed-by=/etc/apt/keyrings/llvm.asc] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-15 main" > /etc/apt/sources.list.d/llvm.list
+RUN echo "deb [signed-by=/etc/apt/keyrings/llvm.asc] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" > /etc/apt/sources.list.d/llvm.list
 RUN apt-get update
-RUN apt-get install -y llvm-15 clang-15 python3 python3-pip libudev-dev figlet
+RUN apt-get install -y llvm-19 clang-19 python3 python3-pip libudev-dev figlet
+
+# install uv and Python packages as root (system-wide)
+RUN pip3 install uv && uv pip install --system pytablewriter tqdm toml
 
 # tools for users
 RUN apt-get install -y sudo vim git build-essential curl
@@ -28,11 +31,10 @@ USER rustle
 WORKDIR /home/rustle
 
 # other components
-RUN curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain 1.67.0
+RUN curl --proto '=https' --tlsv1.2 https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain stable
 # RUN echo 'source /home/rustle/.cargo/env' >> /home/rustle/.bashrc
 
 ENV PATH="/home/rustle/.cargo/bin:/home/rustle/.local/bin:$PATH"
 
 RUN rustup target add wasm32-unknown-unknown
 RUN cargo install rustfilt
-RUN pip3 install pytablewriter tqdm toml
