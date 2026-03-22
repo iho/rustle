@@ -22,11 +22,13 @@ TMP_PATH = os.environ["TMP_DIR"]
 os.makedirs(TMP_PATH, exist_ok=True)
 
 callback_func_set = set()
-os.system("mv {0} {0}.org; rustfilt -i {0}.org -o {0}; rm {0}.org".format(TMP_PATH + "/.callback.tmp"))
-with open(TMP_PATH + "/.callback.tmp", "r") as f:
-    for line in f:
-        func, file = line.strip().split("@")
-        callback_func_set.add((func, file))
+callback_tmp = TMP_PATH + "/.callback.tmp"
+if os.path.exists(callback_tmp):
+    os.system("mv {0} {0}.org; rustfilt -i {0}.org -o {0}; rm {0}.org 2>/dev/null || mv {0}.org {0}".format(callback_tmp))
+    with open(callback_tmp, "r") as f:
+        for line in f:
+            func, file = line.strip().split("@")
+            callback_func_set.add((func, file))
 
 with open(TMP_PATH + "/.non-private-callback.tmp", "w") as out_file:
     for path in getFiles(PROJ_PATH):
