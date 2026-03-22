@@ -1,0 +1,15 @@
+[package]
+name = "upgrade-owner-check"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "5"
+near-sys = "0.2"
+
+[profile.release]
+overflow-checks = true
+panic = "abort"

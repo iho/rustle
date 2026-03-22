@@ -1,0 +1,12 @@
+[package]
+name = "callback_panic"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "callback_panic"
+path = "src/main.rs"
+
+[dependencies]
+near_core = { path = "../near_core" }
+llvm-sys = "211"

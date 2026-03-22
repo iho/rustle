@@ -64,6 +64,8 @@ state_change_before_call_set = set()  # func, file, line
 unchecked_promise_result_set = set()  # func, file, line
 missing_owner_check_set = set()  # func, file, line
 promise_chain_set = set()  # func, file, line
+callback_panic_set = set()  # func, file, line
+upgrade_owner_check_set = set()  # func, file, line
 
 
 # deadcode_set = set()
@@ -353,6 +355,24 @@ try:
         for line in f:
             func, file, line = line.strip().split("@")
             promise_chain_set.add((func, file, int(line)))
+except Exception as e:
+    if PRINT_LOG_NOT_FOUND:
+        print("Tmp log not found: ", e)
+
+try:
+    with open(TMP_PATH + "/.callback-panic.tmp", "r") as f:
+        for line in f:
+            func, file, line = line.strip().split("@")
+            callback_panic_set.add((func, file, int(line)))
+except Exception as e:
+    if PRINT_LOG_NOT_FOUND:
+        print("Tmp log not found: ", e)
+
+try:
+    with open(TMP_PATH + "/.upgrade-owner-check.tmp", "r") as f:
+        for line in f:
+            func, file, line = line.strip().split("@")
+            upgrade_owner_check_set.add((func, file, int(line)))
 except Exception as e:
     if PRINT_LOG_NOT_FOUND:
         print("Tmp log not found: ", e)
@@ -713,6 +733,21 @@ for path in tqdm(getFiles(PROJ_PATH, ignoreTest=True, ignoreMock=True)):
                     hasPrint = True
             if hasPrint:
                 note_high = note_high.rstrip() + ">; "
+
+        if not _skip("callback-panic"):
+            hasPrint = False
+            for func_string, func_path, func_line in callback_panic_set:
+                if structFuncNameMatch(func_string, func["struct"], func["struct_trait"], func_name, path, func_path):
+                    note_medium += ("" if hasPrint else "possible callback panic at <") + "L" + str(func_line) + " "
+                    hasPrint = True
+            if hasPrint:
+                note_medium = note_medium.rstrip() + ">; "
+
+        if not _skip("upgrade-owner-check"):
+            for func_string, func_path, func_line in upgrade_owner_check_set:
+                if structFuncNameMatch(func_string, func["struct"], func["struct_trait"], func_name, path, func_path):
+                    note_high += "missing owner check for upgrade; "
+                    break
 
         if not _skip("unclaimed-storage-fee"):
             for func_string, hasCheck in unclaimed_storage_fee_set:

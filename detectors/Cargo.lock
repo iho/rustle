@@ -34,6 +34,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "callback_panic"
+version = "0.1.0"
+dependencies = [
+ "llvm-sys",
+ "near_core",
+]
+
+[[package]]
 name = "cc"
 version = "1.2.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -341,6 +349,14 @@ dependencies = [
 
 [[package]]
 name = "upgrade_func"
+version = "0.1.0"
+dependencies = [
+ "llvm-sys",
+ "near_core",
+]
+
+[[package]]
+name = "upgrade_owner_check"
 version = "0.1.0"
 dependencies = [
  "llvm-sys",

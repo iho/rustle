@@ -71,7 +71,7 @@ get-packages-name:
 	@$(PYTHON) ./utils/getPackagesName.py
 
 analysis: unsafe-math round reentrancy div-before-mul transfer timestamp promise-result upgrade-func self-transfer prepaid-gas unhandled-promise yocto-attach complex-loop \
-	state-change-before-call unchecked-promise-result missing-owner-check promise-chain \
+	state-change-before-call unchecked-promise-result missing-owner-check promise-chain callback-panic upgrade-owner-check \
 	tautology unused-ret inconsistency lock-callback non-callback-private non-private-callback incorrect-json-type
 
 callback: tg_ir
@@ -312,6 +312,26 @@ promise-chain: tg_ir
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
 	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/promise_chain {}
+
+callback-panic: tg_ir
+	@rm -f ${TMP_DIR}/.$@.tmp
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p callback_panic -q
+	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
+	else \
+		echo -e "\e[31m[!] Source not found\e[0m" ; \
+	fi  # ]]
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/callback_panic {}
+
+upgrade-owner-check: tg_ir
+	@rm -f ${TMP_DIR}/.$@.tmp
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p upgrade_owner_check -q
+	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
+	else \
+		echo -e "\e[31m[!] Source not found\e[0m" ; \
+	fi  # ]]
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/upgrade_owner_check {}
 
 nep%-interface: tg_ir
 	@rm -f ${TMP_DIR}/.nep$*-interface.tmp

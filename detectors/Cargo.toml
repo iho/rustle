@@ -30,6 +30,8 @@ members = [
     "unchecked_promise_result",
     "missing_owner_check",
     "promise_chain",
+    "callback_panic",
+    "upgrade_owner_check",
 ]
 resolver = "2"
 

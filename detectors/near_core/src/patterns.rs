@@ -214,6 +214,27 @@ pub fn all_unwrap() -> &'static Regex {
     })
 }
 
+///// Matches the panic handler emitted when `Option::unwrap()` or `Result::unwrap()` fails.
+///
+/// In debug (unoptimised) builds the `unwrap` wrapper is inlined by the compiler, so the
+/// only `call` instruction that appears in the IR is to `core::option::unwrap_failed` or
+/// `core::result::unwrap_failed`.  In optimised builds the wrapper may also survive as a
+/// direct `call @…::unwrap…`, so both forms are matched.
+///
+/// `expect_failed` is NOT matched — it is only reachable from `.expect(msg)`, not from
+/// plain `.unwrap()`.
+pub fn plain_unwrap() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        re(concat!(
+            // inlined form: core::option::unwrap_failed / core::result::unwrap_failed
+            r"core[0-9]+(option|result)[0-9]+unwrap_failed[0-9]+",
+            // non-inlined form: core::option::Option::<T>::unwrap / core::result::Result::<T,E>::unwrap
+            r"|core[0-9]+(option[0-9]+Option|result[0-9]+Result)\$.+[0-9]+unwrap[0-9]+"
+        ))
+    })
+}
+
 /// Matches unsafe unwrap variants (unwrap_or / unwrap_or_default / unwrap_unchecked).
 pub fn unchecked_unwrap() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
