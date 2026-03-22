@@ -26,14 +26,16 @@ for path in getFiles(PROJ_PATH):
     all_funcs += findFunc(path)
 
 all_calls = dict()  # {filename_line, {callee}}
-os.system("mv {0} {0}.org; rustfilt -i {0}.org -o {0}; rm {0}.org".format(TMP_PATH + "/.all-call.tmp"))
-with open(TMP_PATH + "/.all-call.tmp", "r") as file:
-    for line in file:
-        callee_llvm, file, line_no = line.strip().split("@")
-        if file + "@" + line_no in all_calls.keys():
-            all_calls[file + "@" + line_no].append(callee_llvm)
-        else:
-            all_calls[file + "@" + line_no] = [callee_llvm]
+all_call_tmp = TMP_PATH + "/.all-call.tmp"
+if os.path.exists(all_call_tmp):
+    os.system("mv {0} {0}.org; rustfilt -i {0}.org -o {0}; rm {0}.org 2>/dev/null || mv {0}.org {0}".format(all_call_tmp))
+    with open(all_call_tmp, "r") as file:
+        for line in file:
+            callee_llvm, file, line_no = line.strip().split("@")
+            if file + "@" + line_no in all_calls.keys():
+                all_calls[file + "@" + line_no].append(callee_llvm)
+            else:
+                all_calls[file + "@" + line_no] = [callee_llvm]
 
 
 with open(TMP_PATH + "/.unused-ret.tmp", "w") as out_file:
