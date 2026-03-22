@@ -28,6 +28,7 @@ members = [
     "struct_member",
     "state_change_before_call",
     "unchecked_promise_result",
+    "missing_owner_check",
 ]
 resolver = "2"
 

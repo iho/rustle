@@ -59,6 +59,7 @@ nft_approval_check_set = set()  # func, check
 nft_owner_check_set = set()  # func, check
 state_change_before_call_set = set()  # func, file, line
 unchecked_promise_result_set = set()  # func, file, line
+missing_owner_check_set = set()  # func, file, line
 
 
 # deadcode_set = set()
@@ -330,6 +331,15 @@ try:
         for line in f:
             func, file, line = line.strip().split("@")
             unchecked_promise_result_set.add((func, file, int(line)))
+except Exception as e:
+    if PRINT_LOG_NOT_FOUND:
+        print("Tmp log not found: ", e)
+
+try:
+    with open(TMP_PATH + "/.missing-owner-check.tmp", "r") as f:
+        for line in f:
+            func, file, line = line.strip().split("@")
+            missing_owner_check_set.add((func, file, int(line)))
 except Exception as e:
     if PRINT_LOG_NOT_FOUND:
         print("Tmp log not found: ", e)
@@ -641,6 +651,14 @@ for path in tqdm(getFiles(PROJ_PATH, ignoreTest=True, ignoreMock=True)):
         for func_string, func_path, func_line in unchecked_promise_result_set:
             if structFuncNameMatch(func_string, func["struct"], func["struct_trait"], func_name, path, func_path):
                 note_high += ("" if hasPrint else "unchecked promise result at <") + "L" + str(func_line) + " "
+                hasPrint = True
+        if hasPrint:
+            note_high = note_high.rstrip() + ">; "
+
+        hasPrint = False
+        for func_string, func_path, func_line in missing_owner_check_set:
+            if structFuncNameMatch(func_string, func["struct"], func["struct_trait"], func_name, path, func_path):
+                note_high += ("" if hasPrint else "missing owner check at <") + "L" + str(func_line) + " "
                 hasPrint = True
         if hasPrint:
             note_high = note_high.rstrip() + ">; "
