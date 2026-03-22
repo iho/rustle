@@ -9,12 +9,18 @@ export
 TOP = $(shell pwd)
 
 ifeq ($(shell uname -s), Linux)
-	LLVM_DIR = $(shell llvm-config-19 --obj-root)
+	LLVM_DIR = $(shell llvm-config-21 --obj-root)
 else ifeq ($(shell uname -s), Darwin)
-	LLVM_DIR = $(shell brew --prefix llvm@19)
+	LLVM_DIR = $(shell brew --prefix llvm)
 else
 	LLVM_DIR = $(shell llvm-config --obj-root)
 endif
+
+# Required by llvm-sys so cargo build finds the correct LLVM installation
+export LLVM_SYS_211_PREFIX = $(LLVM_DIR)
+
+# Python interpreter — uses uv venv if available, falls back to python3
+PYTHON = $(shell test -f ${TOP}/.venv/bin/python && echo ${TOP}/.venv/bin/python || echo python3)
 
 # Binaries
 LLVM_CONFIG = ${LLVM_DIR}/bin/llvm-config
@@ -50,7 +56,7 @@ echo:
 	@echo "TG_MANIFESTS = ${TG_MANIFESTS}"
 
 pass:
-	make -C detectors pass
+	make -C detectors rust-pass
 
 tg_ir:
 	-@for i in ${TG_MANIFESTS} ; do \
@@ -62,344 +68,346 @@ tg_ir:
 
 
 get-packages-name:
-	@python3 ./utils/getPackagesName.py
+	@$(PYTHON) ./utils/getPackagesName.py
 
 analysis: unsafe-math round reentrancy div-before-mul transfer timestamp promise-result upgrade-func self-transfer prepaid-gas unhandled-promise yocto-attach complex-loop \
 	tautology unused-ret inconsistency lock-callback non-callback-private non-private-callback incorrect-json-type
 
 callback: tg_ir
 	@rm -f ${TMP_DIR}/.callback.tmp
-	@make -C detectors callback.so
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/callback.so -callback {} -o /dev/null
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p callback -q
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/callback {}
 
 ext-call-trait: tg_ir
-	@rm -f ${TMP_DIR}/.ext-call.tmp
-	@make -C detectors ext_call_trait.so
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/ext_call_trait.so -ext-call-trait {} -o /dev/null
+	@rm -f ${TMP_DIR}/.ext-call-trait.tmp
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p ext_call_trait -q
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/ext_call_trait {}
 
 ext-call: tg_ir ext-call-trait
-	@make -C detectors ext_call.so
+	@rm -f ${TMP_DIR}/.ext-call.tmp
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p ext_call -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/ext_call.so -ext-call {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/ext_call {}
 
 complex-loop: tg_ir
 	rm -f ${TMP_DIR}/.$@.tmp
-	make -C detectors complex_loop.so
+	cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p complex_loop -q
 	if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/complex_loop.so -complex-loop {} -o /dev/null
+	cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/complex_loop {}
 
 unsafe-math: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp ${TMP_DIR}/.$@-toml.tmp
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@python3 ./detectors/unsafe-math-toml.py ${NEAR_SRC_DIR}
-	@make -C detectors unsafe_math.so
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/unsafe_math.so -unsafe-math {} -o /dev/null
+	@$(PYTHON) ./detectors/unsafe-math-toml.py ${NEAR_SRC_DIR}
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p unsafe_math -q
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/unsafe_math {}
 
 round: tg_ir
-	@make -C detectors round.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p round -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/round.so -round {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/round {}
 
 struct-member: tg_ir find-struct
-	@make -C detectors struct_member.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p struct_member -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/struct_member.so -struct-member {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/struct_member {}
 
 reentrancy: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors reentrancy.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p reentrancy -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/reentrancy.so -reentrancy {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/reentrancy {}
 
 div-before-mul: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors div_before_mul.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p div_before_mul -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/div_before_mul.so -div-before-mul {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/div_before_mul {}
 
 transfer: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors transfer.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p transfer -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/transfer.so -transfer {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/transfer {}
 
 timestamp: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors timestamp.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p timestamp -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/timestamp.so -timestamp {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/timestamp {}
 
 promise-result: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors promise_result.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p promise_result -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/promise_result.so -promise-result {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/promise_result {}
 
 upgrade-func: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors upgrade_func.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p upgrade_func -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/upgrade_func.so -upgrade-func {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/upgrade_func {}
 
 self-transfer: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors self_transfer.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p self_transfer -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/self_transfer.so -self-transfer {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/self_transfer {}
 
 prepaid-gas: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors prepaid_gas.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p prepaid_gas -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/prepaid_gas.so -prepaid-gas {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/prepaid_gas {}
 
 all-call: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors all_call.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p all_call -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/all_call.so -all-call {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/all_call {}
 
 unhandled-promise: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors unhandled_promise.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p unhandled_promise -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/unhandled_promise.so -unhandled-promise {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/unhandled_promise {}
 
 yocto-attach: tg_ir callback
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors yocto_attach.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p yocto_attach -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/yocto_attach.so -yocto-attach {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/yocto_attach {}
 
 storage-gas: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors storage_gas.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p storage_gas -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/storage_gas.so -storage-gas {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/storage_gas {}
 
 unregistered-receiver: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors unregistered_receiver.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p unregistered_receiver -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/unregistered_receiver.so -unregistered-receiver {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/unregistered_receiver {}
 
 unsaved-changes: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors unsaved_changes.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p unsaved_changes -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/unsaved_changes.so -unsaved-changes {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/unsaved_changes {}
 
 nep%-interface: tg_ir
-	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors nep_interface.so
+	@rm -f ${TMP_DIR}/.nep$*-interface.tmp
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p nep_interface -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
 	@echo "\e[33m[*] Checking interfaces of NEP-$*\e[0m"  #]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/nep_interface.so -nep-interface --nep-id $* {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/nep_interface --nep-id $* {}
 
 unclaimed-storage-fee: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors unclaimed_storage_fee.so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p unclaimed_storage_fee -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/unclaimed_storage_fee.so -unclaimed-storage-fee {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/unclaimed_storage_fee {}
 
 nft-approval-check: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors $(subst -,_,$@).so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p nft_approval_check -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/$(subst -,_,$@).so -$@ {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/nft_approval_check {}
 
 nft-owner-check: tg_ir
 	@rm -f ${TMP_DIR}/.$@.tmp
-	@make -C detectors $(subst -,_,$@).so
+	@cargo build --release --manifest-path ${TOP}/detectors/Cargo.toml -p nft_owner_check -q
 	@if test $(shell cat ${TMP_DIR}/.bitcodes.tmp | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} $(LLVM_OPT) ${OPTFLAGS} -load detectors/$(subst -,_,$@).so -$@ {} -o /dev/null
+	@cat ${TMP_DIR}/.bitcodes.tmp | xargs -I {} ${TOP}/detectors/target/release/nft_owner_check {}
 
 tautology:
 	@rm -f ${TMP_DIR}/.$@.tmp
 	@if test $(shell find ${NEAR_SRC_DIR}// -name '*.rs' | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@python3 ./detectors/tautology.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./detectors/tautology.py ${NEAR_SRC_DIR}
 
 unused-ret: all-call
 	@rm -f ${TMP_DIR}/.$@.tmp
 	@if test $(shell find ${NEAR_SRC_DIR}// -name '*.rs' | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@python3 ./detectors/unused-ret.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./detectors/unused-ret.py ${NEAR_SRC_DIR}
 
 inconsistency:
 	@rm -f ${TMP_DIR}/.$@.tmp
 	@if test $(shell find ${NEAR_SRC_DIR}// -name '*.rs' | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@python3 ./detectors/inconsistency.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./detectors/inconsistency.py ${NEAR_SRC_DIR}
 
 lock-callback: callback
 	@rm -f ${TMP_DIR}/.$@.tmp
 	@if test $(shell find ${NEAR_SRC_DIR}// -name '*.rs' | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@python3 ./detectors/lock-callback.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./detectors/lock-callback.py ${NEAR_SRC_DIR}
 
 non-callback-private: callback
 	@rm -f ${TMP_DIR}/.$@.tmp
 	@if test $(shell find ${NEAR_SRC_DIR}// -name '*.rs' | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@python3 ./detectors/non-callback-private.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./detectors/non-callback-private.py ${NEAR_SRC_DIR}
 
 non-private-callback: callback
 	@rm -f ${TMP_DIR}/.$@.tmp
 	@if test $(shell find ${NEAR_SRC_DIR}// -name '*.rs' | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@python3 ./detectors/non-private-callback.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./detectors/non-private-callback.py ${NEAR_SRC_DIR}
 
 incorrect-json-type: find-struct
 	@rm -f ${TMP_DIR}/.$@.tmp
 	@if test $(shell find ${NEAR_SRC_DIR}// -name '*.rs' | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@python3 ./detectors/incorrect-json-type.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./detectors/incorrect-json-type.py ${NEAR_SRC_DIR}
 
 public-interface:
 	@rm -f ${TMP_DIR}/.$@.tmp
 	@if test $(shell find ${NEAR_SRC_DIR}// -name '*.rs' | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@python3 ./detectors/public-interface.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./detectors/public-interface.py ${NEAR_SRC_DIR}
 
 dup-collection-id:
 	@rm -f ${TMP_DIR}/.$@.tmp
 	@if test $(shell find ${NEAR_SRC_DIR}// -name '*.rs' | wc -c) -gt 0 ; then \
-		figlet $@ ; \
+		command -v figlet >/dev/null 2>&1 && figlet $@ || echo "=== $@ ==="; \
 	else \
 		echo -e "\e[31m[!] Source not found\e[0m" ; \
 	fi  # ]]
-	@python3 ./detectors/dup-collection-id.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./detectors/dup-collection-id.py ${NEAR_SRC_DIR}
 
 find-struct:  # provide .struct.tmp and .struct-member.tmp
-	@python3 ./utils/findStruct.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./utils/findStruct.py ${NEAR_SRC_DIR}
 
 audit: promise-result reentrancy transfer timestamp div-before-mul unsafe-math round find-struct upgrade-func self-transfer prepaid-gas unhandled-promise yocto-attach complex-loop \
 	tautology unused-ret inconsistency lock-callback non-callback-private non-private-callback incorrect-json-type
-	@python3 ./utils/audit.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./utils/audit.py ${NEAR_SRC_DIR}
 
 audit-report:
-	@python3 ./utils/audit.py ${NEAR_SRC_DIR}
+	@$(PYTHON) ./utils/audit.py ${NEAR_SRC_DIR}
 
 clean: clean_pass clean_example clean_tg
 clean_pass:
 	make -C detectors clean
+	make -C detectors rust-clean
 clean_example:
 	find examples -name "Cargo.toml" | xargs -I {} cargo clean --manifest-path={}
 clean_tg:

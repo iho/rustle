@@ -23,14 +23,14 @@ jobs:
     - name: Add LLVM deb repository
       uses: myci-actions/add-deb-repo@11
       with:
-        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main
+        repo: deb http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main
         repo-name: llvm
         keys-asc: https://apt.llvm.org/llvm-snapshot.gpg.key
 
     - name: Install tools
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang-tidy-19
+        sudo apt-get install -y clang-tidy-21
 
     - name: Lint
       run: make lint
@@ -70,7 +70,7 @@ jobs:
     - name: Install tools
       run: |
         curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-        brew install llvm@19
+        brew install llvm
         pip3 install uv && uv pip install --system -r utils/requirements.txt
         brew install figlet coreutils gsed
         cargo install rustfilt

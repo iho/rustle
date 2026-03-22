@@ -11,9 +11,9 @@ RUN apt-get update
 # tools for Rustle
 RUN apt-get install -y wget gnupg2
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/keyrings/llvm.asc
-RUN echo "deb [signed-by=/etc/apt/keyrings/llvm.asc] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-19 main" > /etc/apt/sources.list.d/llvm.list
+RUN echo "deb [signed-by=/etc/apt/keyrings/llvm.asc] http://apt.llvm.org/jammy/ llvm-toolchain-jammy-21 main" > /etc/apt/sources.list.d/llvm.list
 RUN apt-get update
-RUN apt-get install -y llvm-19 clang-19 python3 python3-pip libudev-dev figlet
+RUN apt-get install -y llvm-21 clang-21 python3 python3-pip libudev-dev figlet
 
 # install uv and Python packages as root (system-wide)
 RUN pip3 install uv && uv pip install --system pytablewriter tqdm toml
