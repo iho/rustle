@@ -184,6 +184,33 @@ fn main() {
                     // regardless of whether reentrancy was found.
                     continue 'func_loop;
                 }
+
+                // SDK 5 fallback: `match PromiseResult` compiles to icmp+br instead of switch.
+                // Find conditional branch instructions among the transitive users of the sret
+                // alloca and check all their successors for reentrant stores.
+                let mut found_branch = false;
+                for &user in &pm_rs_users {
+                    let user_inst = InstructionRef(user);
+                    if !user_inst.is_branch() {
+                        continue;
+                    }
+                    let n_succ = user_inst.num_successors();
+                    if n_succ < 2 {
+                        continue; // unconditional branch — not what we want
+                    }
+                    for i in 0..n_succ {
+                        let succ_bb = user_inst.get_successor(i);
+                        if succ_bb.is_null() {
+                            continue;
+                        }
+                        check_reentrant_store(func, succ_bb, &writer);
+                    }
+                    found_branch = true;
+                    break;
+                }
+                if found_branch {
+                    continue 'func_loop;
+                }
             }
         }
     }

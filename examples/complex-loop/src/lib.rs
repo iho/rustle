@@ -1,6 +1,6 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::near_bindgen;
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::serde::{Deserialize, Serialize};
+use near_sdk::{near, near_bindgen};
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
@@ -35,8 +35,7 @@ impl User {
         self.amount -= 1;
     }
 }
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     users: Vec<User>,
 }

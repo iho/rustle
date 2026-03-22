@@ -1,8 +1,6 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen, Promise, PromiseResult};
+use near_sdk::{env, near, near_bindgen, Promise, PromiseResult};
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     value: u64,
 }
@@ -18,9 +16,9 @@ impl Contract {
     /// Combines two cross-contract calls and chains a callback.
     pub fn call_two(&self) -> Promise {
         let p1 = Promise::new("a.near".parse().unwrap())
-            .function_call("get_a".into(), vec![], 0, env::prepaid_gas() / 3);
+            .function_call("get_a".to_string(), vec![], near_sdk::NearToken::from_yoctonear(0), near_sdk::Gas::from_gas(env::prepaid_gas().as_gas() / 3));
         let p2 = Promise::new("b.near".parse().unwrap())
-            .function_call("get_b".into(), vec![], 0, env::prepaid_gas() / 3);
+            .function_call("get_b".to_string(), vec![], near_sdk::NearToken::from_yoctonear(0), near_sdk::Gas::from_gas(env::prepaid_gas().as_gas() / 3));
         p1.and(p2).then(
             Self::ext(env::current_account_id()).on_both()
         )

@@ -1,14 +1,12 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::U128;
-use near_sdk::{ext_contract, near_bindgen, Promise};
+use near_sdk::{ext_contract, near, near_bindgen, Promise};
 
 #[ext_contract(ext_calculator)]
 trait Calculator {
     fn sum(&self, a: U128, b: U128) -> U128;
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {}
 
 impl Default for Contract {

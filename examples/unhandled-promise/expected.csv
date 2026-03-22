@@ -1,4 +1,4 @@
 "file","name","high","medium","low","info"
-"src/lib.rs","withdraw_with_promise","unhandled promise at <L42>;",,,
-"src/lib.rs","transfer_without_promise","unhandled promise at <L50>;",,,
+"src/lib.rs","withdraw_with_promise","unhandled promise at <L40>;",,,
+"src/lib.rs","transfer_without_promise","unhandled promise at <L48>;",,,
 "global","global",,,"No upgrade function found;",

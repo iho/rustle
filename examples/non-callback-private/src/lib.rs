@@ -1,7 +1,7 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::U128;
 use near_sdk::serde::Serialize;
-use near_sdk::{near_bindgen, AccountId};
+use near_sdk::{near, near_bindgen, AccountId};
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Clone)]
 #[serde(crate = "near_sdk::serde")]
@@ -11,8 +11,7 @@ pub struct Token {
     supply: U128,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct PoolContract {
     token_list: Vec<Token>,
 }

@@ -1,8 +1,9 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedSet;
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near_bindgen, AccountId, Balance, BorshStorageKey};
+use near_sdk::{env, near, near_bindgen, AccountId, BorshStorageKey};
+type Balance = u128;
 
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
@@ -12,7 +13,7 @@ pub(crate) enum StorageKey {
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Bank {
     owner: AccountId,
-    balance: Balance,
+    balance: u128,
 }
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
@@ -22,8 +23,7 @@ pub struct BankInterface {
     balance: U128,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     banks: UnorderedSet<Bank>,
 }
@@ -47,8 +47,8 @@ impl Contract {
         });
 
         assert!(
-            env::attached_deposit()
-                > ((env::storage_usage() - prev_storage) as u128 * env::storage_byte_cost()),
+            env::attached_deposit().as_yoctonear()
+                > ((env::storage_usage() - prev_storage) as u128 * env::storage_byte_cost().as_yoctonear()),
             "insufficient storage gas"
         );
     }

@@ -1,20 +1,17 @@
 use near_contract_standards::fungible_token::core::ext_ft_core;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::U128;
-use near_sdk::{env, ext_contract, log, Promise, PromiseResult};
-use near_sdk::{near_bindgen, AccountId, Gas};
+use near_sdk::{env, ext_contract, log, near, near_bindgen, AccountId, Gas, Promise, PromiseResult};
 
 pub const TGAS: u64 = 1_000_000_000_000;
-const GAS_FOR_FT_TRANSFER_CALL: Gas = Gas(30 * TGAS);
-const GAS_FOR_FT_RESOLVE_TRANSFER: Gas = Gas(10 * TGAS);
+const GAS_FOR_FT_TRANSFER_CALL: Gas = Gas::from_gas(30 * TGAS);
+const GAS_FOR_FT_RESOLVE_TRANSFER: Gas = Gas::from_gas(10 * TGAS);
 
 #[ext_contract(ext_self)]
 pub trait SelfContract {
     fn callback_withdraw(&mut self, amount: U128) -> bool;
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct VictimContract {
     token_id: AccountId,
     depositor: AccountId,
@@ -39,13 +36,13 @@ impl VictimContract {
         assert!(self.balance >= amount.into(), "insufficient balance");
 
         ext_ft_core::ext(self.token_id.clone())
-            .with_attached_deposit(1)
+            .with_attached_deposit(near_sdk::NearToken::from_yoctonear(1))
             .with_static_gas(GAS_FOR_FT_TRANSFER_CALL)
             .ft_transfer_call(self.depositor.clone(), amount, None, "".to_string())
             .then(
                 ext_self::ext(env::current_account_id())
                     .with_static_gas(GAS_FOR_FT_RESOLVE_TRANSFER)
-                    .with_attached_deposit(0)
+                    .with_attached_deposit(near_sdk::NearToken::from_yoctonear(0))
                     .callback_withdraw(amount),
             )
     }
@@ -66,7 +63,6 @@ impl VictimContract {
         log!("victim::callback_withdraw :{:?}", env::block_height());
 
         match env::promise_result(0) {
-            PromiseResult::NotReady => unreachable!(),
             PromiseResult::Successful(_) => {
                 self.balance -= amount.0;
             }

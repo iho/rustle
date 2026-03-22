@@ -1,11 +1,10 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::borsh::BorshSerialize;
 use near_sdk::collections::UnorderedMap;
-use near_sdk::{env, ext_contract, require, BorshStorageKey, Promise, PromiseResult};
-use near_sdk::{near_bindgen, Gas};
+use near_sdk::{env, ext_contract, near, near_bindgen, require, BorshStorageKey, Gas, Promise, PromiseResult};
 
 pub const TGAS: u64 = 1_000_000_000_000;
-const GAS_FOR_EXT_CALL: Gas = Gas(10 * TGAS);
-const GAS_FOR_CALLBACK: Gas = Gas(10 * TGAS);
+const GAS_FOR_EXT_CALL: Gas = Gas::from_gas(10 * TGAS);
+const GAS_FOR_CALLBACK: Gas = Gas::from_gas(10 * TGAS);
 
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
@@ -17,8 +16,7 @@ trait ScoreContract {
     fn use_score(uid: u16, amount: u32);
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     user_score: UnorderedMap<u16, u32>,
 }
@@ -45,7 +43,7 @@ impl Contract {
             .insert(&uid, &(self.user_score.get(&uid).unwrap() - amount));
 
         ext_score::ext("score.near".parse().unwrap())
-            .with_attached_deposit(1)
+            .with_attached_deposit(near_sdk::NearToken::from_yoctonear(1))
             .with_static_gas(GAS_FOR_EXT_CALL)
             .use_score(uid.clone(), amount.clone())
             .then(
@@ -64,7 +62,6 @@ impl Contract {
     /// cross-contract invocation with an arbitrary `amount`
     pub fn use_score_callback(&mut self, uid: u16, amount: u32) {
         match env::promise_result(0) {
-            PromiseResult::NotReady => unreachable!(),
             PromiseResult::Successful(_) => {}
             PromiseResult::Failed => {
                 self.user_score.insert(&uid, &amount);

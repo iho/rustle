@@ -1,8 +1,6 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen, Promise};
+use near_sdk::{env, near, near_bindgen, Gas, Promise};
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     credits: u128,
 }
@@ -18,7 +16,7 @@ impl Contract {
     /// Initiates a cross-contract call.
     pub fn buy_credits(&mut self, amount: u128) -> Promise {
         Promise::new("oracle.near".parse().unwrap())
-            .function_call("get_price".into(), vec![], 0, env::prepaid_gas() / 2)
+            .function_call("get_price".to_string(), vec![], near_sdk::NearToken::from_yoctonear(0), Gas::from_gas(env::prepaid_gas().as_gas() / 2))
             .then(Self::ext(env::current_account_id()).on_price(amount))
     }
 

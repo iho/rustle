@@ -2,7 +2,7 @@ use near_contract_standards::non_fungible_token::{
     approval::NonFungibleTokenApproval, bytes_for_approved_account_id, metadata::TokenMetadata,
     refund_approved_account_ids, refund_approved_account_ids_iter, refund_deposit, TokenId,
 };
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, TreeMap, UnorderedSet};
 use near_sdk::{
     assert_one_yocto, env, ext_contract, require, AccountId, BorshStorageKey, Gas, IntoStorageKey,
@@ -10,7 +10,7 @@ use near_sdk::{
 };
 use std::collections::HashMap;
 
-const GAS_FOR_NFT_APPROVE: Gas = Gas(10_000_000_000_000);
+const GAS_FOR_NFT_APPROVE: Gas = Gas::from_gas(10_000_000_000_000);
 
 fn expect_token_found<T>(option: Option<T>) -> T {
     option.unwrap_or_else(|| env::panic_str("Token not found"))
@@ -22,7 +22,7 @@ fn expect_approval<T>(option: Option<T>) -> T {
 
 pub(crate) fn assert_at_least_one_yocto() {
     require!(
-        env::attached_deposit() >= 1,
+        env::attached_deposit() >= near_sdk::NearToken::from_yoctonear(1),
         "Requires attached deposit of at least 1 yoctoNEAR"
     )
 }
@@ -134,7 +134,7 @@ impl NonFungibleTokenApproval for NFT {
 
         msg.map(|msg| {
             ext_nft_approval_receiver::ext(account_id)
-                .with_static_gas(env::prepaid_gas() - GAS_FOR_NFT_APPROVE)
+                .with_static_gas(Gas::from_gas(env::prepaid_gas().as_gas() - GAS_FOR_NFT_APPROVE.as_gas()))
                 .nft_on_approve(token_id, owner_id, approval_id, msg)
         })
     }

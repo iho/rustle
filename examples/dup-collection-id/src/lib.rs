@@ -1,8 +1,7 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{UnorderedMap, UnorderedSet};
 use near_sdk::serde::Serialize;
-use near_sdk::BorshStorageKey;
-use near_sdk::{near_bindgen, AccountId};
+use near_sdk::{near, near_bindgen, AccountId, BorshStorageKey};
 
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
@@ -19,8 +18,7 @@ pub struct Order {
     amount: u128,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     orders: UnorderedMap<u16, Order>,
     users: UnorderedSet<AccountId>,

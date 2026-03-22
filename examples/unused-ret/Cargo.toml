@@ -8,8 +8,10 @@ edition = "2021"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-near-sdk = "4.0.0"
-near-contract-standards = "4.0.0"
+near-sdk = { version = "5", features = ["legacy"] }
+near-contract-standards = "5"
+
+borsh = { version = "1", features = ["derive"] }
 
 [profile.release]
 overflow-checks = true

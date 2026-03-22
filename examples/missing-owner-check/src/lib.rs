@@ -1,8 +1,6 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen, AccountId, Promise};
+use near_sdk::{env, near, near_bindgen, AccountId, Promise};
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     owner_id: AccountId,
     fee: u128,

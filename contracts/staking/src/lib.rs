@@ -5,9 +5,9 @@
 ///   - storage-gas               in `stake`         (inserts into UnorderedMap without gas check)
 ///   - round                     in `pending_reward` (float arithmetic in financial math)
 ///   - prepaid-gas               in `on_withdraw`   (callback doesn't check prepaid gas)
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
-use near_sdk::{env, ext_contract, log, near_bindgen, AccountId, Gas, Promise, PromiseResult};
+use near_sdk::{env, ext_contract, log, near, near_bindgen, AccountId, Gas, Promise, PromiseResult};
 
 pub const TGAS: u64 = 1_000_000_000_000;
 /// Annual reward rate: 10%
@@ -27,8 +27,7 @@ pub trait SelfContract {
     fn on_withdraw(&mut self, staker: AccountId, amount: u128);
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct StakingPool {
     pub owner_id: AccountId,
     pub total_staked: u128,
@@ -59,7 +58,7 @@ impl StakingPool {
     /// storage expansion.
     #[payable]
     pub fn stake(&mut self) {
-        let amount = env::attached_deposit();
+        let amount = env::attached_deposit().as_yoctonear();
         assert!(amount > 0, "must attach NEAR to stake");
         let caller = env::predecessor_account_id();
         let epoch = env::block_timestamp() / EPOCH_NS;
@@ -108,10 +107,10 @@ impl StakingPool {
         self.total_staked -= total.min(self.total_staked);
 
         Promise::new(caller.clone())
-            .transfer(total)
+            .transfer(near_sdk::NearToken::from_yoctonear(total))
             .then(
                 ext_self::ext(env::current_account_id())
-                    .with_static_gas(Gas(5 * TGAS))
+                    .with_static_gas(Gas::from_gas(5 * TGAS))
                     .on_withdraw(caller, total),
             )
     }

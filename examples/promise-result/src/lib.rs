@@ -1,17 +1,15 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::U128;
-use near_sdk::{env, ext_contract, near_bindgen, AccountId, Gas, Promise, PromiseResult};
+use near_sdk::{env, ext_contract, near, near_bindgen, AccountId, Gas, Promise, PromiseResult};
 
 pub const TGAS: u64 = 1_000_000_000_000;
-const GAS_FOR_WITHDRAW_CALLBACK: Gas = Gas(20 * TGAS);
+const GAS_FOR_WITHDRAW_CALLBACK: Gas = Gas::from_gas(20 * TGAS);
 
 #[ext_contract(ext_self)]
 pub trait SelfContract {
     fn callback_withdraw(&mut self, amount: U128);
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     depositor: AccountId,
     balance: u128,
@@ -34,7 +32,7 @@ impl Contract {
         self.balance -= amount.0;
 
         Promise::new(self.depositor.clone())
-            .transfer(amount.0)
+            .transfer(near_sdk::NearToken::from_yoctonear(amount.0))
             .then(
                 ext_self::ext(env::current_account_id())
                     .with_static_gas(GAS_FOR_WITHDRAW_CALLBACK)
@@ -45,7 +43,6 @@ impl Contract {
     #[private]
     pub fn callback_withdraw(&mut self, amount: U128) {
         match env::promise_result(0) {
-            PromiseResult::NotReady => unreachable!(),
             PromiseResult::Successful(_) => {}
             PromiseResult::Failed => {
                 self.balance += amount.0;

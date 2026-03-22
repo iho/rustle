@@ -1,12 +1,10 @@
 use near_contract_standards::fungible_token::core::ext_ft_core;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::U128;
-use near_sdk::{env, near_bindgen, AccountId, Gas, Promise};
+use near_sdk::{env, near, near_bindgen, AccountId, Gas, Promise};
 
-const GAS_FOR_FT_TRANSFER: Gas = Gas(10_000_000_000_000);
+const GAS_FOR_FT_TRANSFER: Gas = Gas::from_gas(10_000_000_000_000);
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     token_id: AccountId,
     receiver: AccountId,

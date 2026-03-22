@@ -2,7 +2,7 @@ use near_contract_standards::non_fungible_token::{
     core::NonFungibleTokenCore, events::NftTransfer, metadata::TokenMetadata,
     refund_approved_account_ids, Token, TokenId,
 };
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, TreeMap, UnorderedSet};
 use near_sdk::{
     assert_one_yocto, env, ext_contract, require, AccountId, BorshStorageKey, Gas, IntoStorageKey,
@@ -10,8 +10,8 @@ use near_sdk::{
 };
 use std::collections::HashMap;
 
-const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(5_000_000_000_000);
-const GAS_FOR_NFT_TRANSFER_CALL: Gas = Gas(25_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER.0);
+const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas::from_gas(5_000_000_000_000);
+const GAS_FOR_NFT_TRANSFER_CALL: Gas = Gas::from_gas(25_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER.as_gas());
 
 #[ext_contract(ext_nft_receiver)]
 pub trait NonFungibleTokenReceiver {
@@ -129,7 +129,7 @@ impl NonFungibleTokenCore for NFT {
             self.internal_transfer(&sender_id, &receiver_id, &token_id, approval_id, memo);
         // Initiating receiver's call and the callback
         ext_nft_receiver::ext(receiver_id.clone())
-            .with_static_gas(env::prepaid_gas() - GAS_FOR_NFT_TRANSFER_CALL)
+            .with_static_gas(Gas::from_gas(env::prepaid_gas().as_gas() - GAS_FOR_NFT_TRANSFER_CALL.as_gas()))
             .nft_on_transfer(sender_id, old_owner.clone(), token_id.clone(), msg)
             .then(
                 self::ext_nft_resolver::ext(env::current_account_id())
@@ -304,7 +304,7 @@ impl NFT {
             old_owner_id: owner_id,
             new_owner_id: receiver_id,
             token_ids: &[token_id],
-            authorized_id: sender_id.filter(|sender_id| *sender_id == owner_id),
+            authorized_id: sender_id.filter(|sender_id| sender_id.as_str() == owner_id.as_str()).map(|v| &**v),
             memo: memo.as_deref(),
         }
         .emit();
@@ -322,7 +322,6 @@ impl NonFungibleTokenResolver for NFT {
     ) -> bool {
         // Get whether token should be returned
         let must_revert = match env::promise_result(0) {
-            PromiseResult::NotReady => unreachable!(),
             PromiseResult::Successful(value) => {
                 if let Ok(yes_or_no) = near_sdk::serde_json::from_slice::<bool>(&value) {
                     yes_or_no

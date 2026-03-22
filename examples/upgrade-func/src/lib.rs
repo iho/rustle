@@ -1,7 +1,6 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{env, near_bindgen, AccountId};
+use near_sdk::{env, near, near_bindgen, AccountId};
 
 #[derive(Serialize, Deserialize)]
 #[serde(crate = "near_sdk::serde")]
@@ -12,8 +11,7 @@ pub struct Meta {
     balance: U128,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     owner_id: AccountId,
     token_id: AccountId,
@@ -58,9 +56,9 @@ mod upgrade {
     use near_sys as sys;
 
     pub const TGAS: u64 = 1_000_000_000_000;
-    pub const GAS_FOR_COMPLETING_UPGRADE_CALL: Gas = Gas(10 * TGAS);
-    pub const MIN_GAS_FOR_MIGRATE_CALL: Gas = Gas(10 * TGAS);
-    pub const GAS_FOR_GET_META_CALL: Gas = Gas(5 * TGAS);
+    pub const GAS_FOR_COMPLETING_UPGRADE_CALL: Gas = Gas::from_gas(10 * TGAS);
+    pub const MIN_GAS_FOR_MIGRATE_CALL: Gas = Gas::from_gas(10 * TGAS);
+    pub const GAS_FOR_GET_META_CALL: Gas = Gas::from_gas(5 * TGAS);
 
     #[no_mangle]
     pub fn upgrade() {
@@ -80,13 +78,14 @@ mod upgrade {
 
             sys::promise_batch_action_deploy_contract(promise_id, u64::MAX as _, 0);
 
-            let required_gas =
-                env::used_gas() + GAS_FOR_COMPLETING_UPGRADE_CALL + GAS_FOR_GET_META_CALL;
+            let required_gas = near_sdk::Gas::from_gas(
+                env::used_gas().as_gas() + GAS_FOR_COMPLETING_UPGRADE_CALL.as_gas() + GAS_FOR_GET_META_CALL.as_gas()
+            );
             require!(
-                env::prepaid_gas() >= required_gas + MIN_GAS_FOR_MIGRATE_CALL,
+                env::prepaid_gas().as_gas() >= required_gas.as_gas() + MIN_GAS_FOR_MIGRATE_CALL.as_gas(),
                 "No enough gas to complete contract state migration"
             );
-            let migrate_attached_gas = env::prepaid_gas() - required_gas;
+            let migrate_attached_gas = near_sdk::Gas::from_gas(env::prepaid_gas().as_gas() - required_gas.as_gas());
             sys::promise_batch_action_function_call(
                 promise_id,
                 migrate_method_name.len() as _,
@@ -94,7 +93,7 @@ mod upgrade {
                 0 as _,
                 0 as _,
                 0 as _,
-                migrate_attached_gas.0,
+                migrate_attached_gas.as_gas(),
             );
 
             sys::promise_batch_action_function_call(
@@ -104,7 +103,7 @@ mod upgrade {
                 0 as _,
                 0 as _,
                 0 as _,
-                GAS_FOR_GET_META_CALL.0,
+                GAS_FOR_GET_META_CALL.as_gas(),
             );
             sys::promise_return(promise_id);
         }

@@ -1,14 +1,13 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::BorshSerialize;
 use near_sdk::collections::UnorderedSet;
-use near_sdk::{near_bindgen, AccountId, BorshStorageKey};
+use near_sdk::{near, near_bindgen, AccountId, BorshStorageKey};
 
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
     Users,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     users: UnorderedSet<AccountId>,
 }

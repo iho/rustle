@@ -297,6 +297,8 @@ pub fn assert_one_yocto() -> &'static Regex {
 pub fn account_id_eq() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
-        re(r"near_sdk\.\.types\.\.account_id\.\.AccountId.+core\.\.cmp\.\.PartialEq")
+        // near-sdk 4: near_sdk::types::account_id::AccountId
+        // near-sdk 5: AccountId moved to the near-account-id crate
+        re(r"(near_sdk\.\.types\.\.account_id\.\.|near_account_id\.\.account_id\.\.)AccountId.+core\.\.cmp\.\.PartialEq")
     })
 }

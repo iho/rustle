@@ -1,14 +1,13 @@
 use near_contract_standards::fungible_token::core::ext_ft_core;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::json_types::U128;
 use near_sdk::serde::Serialize;
-use near_sdk::{env, BorshStorageKey, Promise, PromiseResult};
-use near_sdk::{near_bindgen, AccountId, Gas};
+use near_sdk::{env, near, near_bindgen, AccountId, BorshStorageKey, Gas, Promise, PromiseResult};
 
 pub const TGAS: u64 = 1_000_000_000_000;
-const GAS_FOR_FT_TRANSFER: Gas = Gas(10 * TGAS);
-const GAS_FOR_CALLBACK: Gas = Gas(10 * TGAS);
+const GAS_FOR_FT_TRANSFER: Gas = Gas::from_gas(10 * TGAS);
+const GAS_FOR_CALLBACK: Gas = Gas::from_gas(10 * TGAS);
 
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
@@ -23,8 +22,7 @@ pub struct Order {
     amount: u128,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     orders: UnorderedMap<u16, Order>,
 }
@@ -53,7 +51,7 @@ impl Contract {
         }
 
         ext_ft_core::ext(order.token_id.clone())
-            .with_attached_deposit(1)
+            .with_attached_deposit(near_sdk::NearToken::from_yoctonear(1))
             .with_static_gas(GAS_FOR_FT_TRANSFER)
             .ft_transfer(order.user.clone(), U128(amount), None)
             .then(
@@ -77,7 +75,6 @@ impl Contract {
         amount: U128,
     ) {
         match env::promise_result(0) {
-            PromiseResult::NotReady => unreachable!(),
             PromiseResult::Successful(_) => {}
             PromiseResult::Failed => {
                 // this assertion can prevent deleted [Order] from getting recovered

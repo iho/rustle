@@ -1,15 +1,16 @@
 use near_contract_standards::fungible_token::core::FungibleTokenCore;
 use near_contract_standards::fungible_token::events::FtTransfer;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::BorshSerialize;
 use near_sdk::collections::UnorderedMap;
 use near_sdk::json_types::U128;
 use near_sdk::{
-    assert_one_yocto, env, ext_contract, near_bindgen, require, AccountId, Balance,
+    assert_one_yocto, env, ext_contract, near, near_bindgen, require, AccountId,
     BorshStorageKey, Gas, PromiseOrValue,
 };
+type Balance = u128;
 
-const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas(5_000_000_000_000);
-const GAS_FOR_FT_TRANSFER_CALL: Gas = Gas(25_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER.0);
+const GAS_FOR_RESOLVE_TRANSFER: Gas = Gas::from_gas(5_000_000_000_000);
+const GAS_FOR_FT_TRANSFER_CALL: Gas = Gas::from_gas(25_000_000_000_000 + GAS_FOR_RESOLVE_TRANSFER.as_gas());
 
 #[ext_contract(ext_ft_receiver)]
 pub trait FungibleTokenReceiver {
@@ -36,11 +37,10 @@ pub enum StorageKey {
     Accounts,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     accounts: UnorderedMap<AccountId, Balance>,
-    total_supply: Balance,
+    total_supply: u128,
 }
 
 impl Default for Contract {
@@ -80,7 +80,7 @@ impl FungibleTokenCore for Contract {
 
         self.internal_transfer_safe(&sender_id, &receiver_id, amount, memo); // safe, will panic when receiver is not registered
         ext_ft_receiver::ext(receiver_id.clone())
-            .with_static_gas(env::prepaid_gas() - GAS_FOR_FT_TRANSFER_CALL)
+            .with_static_gas(Gas::from_gas(env::prepaid_gas().as_gas() - GAS_FOR_FT_TRANSFER_CALL.as_gas()))
             .ft_on_transfer(sender_id.clone(), amount.into(), msg)
             .then(
                 ext_ft_resolver::ext(env::current_account_id())
@@ -170,7 +170,7 @@ impl Contract {
         &mut self,
         sender_id: &AccountId,
         receiver_id: &AccountId,
-        amount: Balance,
+        amount: u128,
         memo: Option<String>,
     ) {
         require!(sender_id != receiver_id, "Identical sender and receiver");
@@ -182,7 +182,7 @@ impl Contract {
         FtTransfer {
             old_owner_id: sender_id,
             new_owner_id: receiver_id,
-            amount: &U128(amount),
+            amount: U128(amount),
             memo: memo.as_deref(),
         }
         .emit();
@@ -191,7 +191,7 @@ impl Contract {
         &mut self,
         sender_id: &AccountId,
         receiver_id: &AccountId,
-        amount: Balance,
+        amount: u128,
         memo: Option<String>,
     ) {
         require!(sender_id != receiver_id, "Identical sender and receiver");
@@ -203,7 +203,7 @@ impl Contract {
         FtTransfer {
             old_owner_id: sender_id,
             new_owner_id: receiver_id,
-            amount: &U128(amount),
+            amount: U128(amount),
             memo: memo.as_deref(),
         }
         .emit();

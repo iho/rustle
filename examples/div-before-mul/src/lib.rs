@@ -1,7 +1,8 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::json_types::U128;
-use near_sdk::{near_bindgen, AccountId, Balance, BorshStorageKey, Timestamp};
+use near_sdk::{near, near_bindgen, AccountId, BorshStorageKey, Timestamp};
+type Balance = u128;
 
 #[derive(BorshStorageKey, BorshSerialize)]
 pub(crate) enum StorageKey {
@@ -13,13 +14,12 @@ const REWARD_RATE: u64 = 1_000_000_000;
 #[derive(BorshDeserialize, BorshSerialize)]
 pub struct Stake {
     owner: AccountId,
-    amount: Balance,
+    amount: u128,
     pub start_date: Timestamp,
     pub end_date: Timestamp,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     stakes: UnorderedMap<u16, Stake>,
 }

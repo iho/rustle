@@ -641,29 +641,33 @@ fn _is_func_privileged_inner(
     let re_pred = crate::patterns::predecessor_account_id();
     let re_eq = crate::patterns::account_id_eq();
 
-    for inst in all_instructions(func) {
-        // Skip instructions without non-lib debug locations
-        match inst.debug_loc() {
-            Some(loc) if !crate::patterns::is_lib_loc(&loc.filename) => {}
-            _ => continue,
-        }
+    // Scan all instructions without filtering by debug location: in near-sdk 5
+    // the require!/assert_eq! macros emit calls with debug locs pointing into
+    // cargo registry files, which would be filtered out by is_lib_loc.
+    let has_pred = all_instructions(func).any(|i| is_inst_call_func(i, re_pred));
+    let has_eq   = all_instructions(func).any(|i| is_inst_call_func(i, re_eq));
 
-        if is_inst_call_func(inst, re_pred) {
-            // Check if any instruction in F calls PartialEq for AccountId
-            for inst2 in all_instructions(func) {
-                if is_inst_call_func(inst2, re_eq) {
-                    return true;
-                }
+    if has_pred && has_eq {
+        return true;
+    }
+
+    // Recurse into callees (excluding lib functions to limit depth noise)
+    for inst in all_instructions(func) {
+        if !inst.is_call() {
+            continue;
+        }
+        unsafe {
+            let callee = LLVMGetCalledValue(inst.raw());
+            if callee.is_null() || LLVMIsAFunction(callee).is_null() {
+                continue;
             }
-        } else if inst.is_call() {
-            unsafe {
-                let callee = LLVMGetCalledValue(inst.raw());
-                if callee.is_null() || LLVMIsAFunction(callee).is_null() {
-                    continue;
-                }
-                if _is_func_privileged_inner(FunctionRef(callee), depth - 1, visited) {
-                    return true;
-                }
+            // Don't recurse into obvious SDK/std internals
+            let callee_ref = FunctionRef(callee);
+            if crate::patterns::is_lib_func(callee_ref.name()) {
+                continue;
+            }
+            if _is_func_privileged_inner(callee_ref, depth - 1, visited) {
+                return true;
             }
         }
     }

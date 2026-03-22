@@ -5,10 +5,10 @@
 ///   - nft-approval-check   in `buy`              (approval_id not verified on transfer)
 ///   - yocto-attach         in `delist`           (privileged fn missing assert_one_yocto)
 ///   - unchecked-promise-result in `on_nft_transfer` (doesn't call is_promise_success)
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::json_types::U128;
-use near_sdk::{env, ext_contract, log, near_bindgen, AccountId, Gas, Promise, PromiseResult};
+use near_sdk::{env, ext_contract, log, near, near_bindgen, AccountId, Gas, Promise, PromiseResult};
 
 #[ext_contract(ext_nft)]
 pub trait NftContract {
@@ -36,8 +36,7 @@ pub trait SelfContract {
     fn on_nft_transfer(&mut self, listing_key: String, buyer: AccountId, price: u128);
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Marketplace {
     pub owner_id: AccountId,
     /// fee in basis points (e.g. 250 = 2.5%)
@@ -100,8 +99,8 @@ impl Marketplace {
     pub fn set_fee_rate(&mut self, new_fee_bps: u32) -> Promise {
         self.fee_bps = new_fee_bps;
         // Sends accumulated fees without checking caller == owner_id
-        let balance = env::account_balance();
-        Promise::new(self.owner_id.clone()).transfer(balance / 10)
+        let balance = env::account_balance().as_yoctonear();
+        Promise::new(self.owner_id.clone()).transfer(near_sdk::NearToken::from_yoctonear(balance / 10))
     }
 
     /// Purchase a listed NFT.
@@ -113,18 +112,18 @@ impl Marketplace {
     pub fn buy(&mut self, nft_contract: AccountId, token_id: String) -> Promise {
         let key = format!("{}:{}", nft_contract, token_id);
         let listing = self.listings.get(&key).expect("not listed");
-        assert!(env::attached_deposit() >= listing.price, "insufficient deposit");
+        assert!(env::attached_deposit().as_yoctonear() >= listing.price, "insufficient deposit");
 
         let buyer = env::predecessor_account_id();
 
         // BUG: approval_id not provided/checked
         ext_nft::ext(listing.nft_contract.clone())
-            .with_attached_deposit(1)
-            .with_static_gas(Gas(30 * TGAS))
+            .with_attached_deposit(near_sdk::NearToken::from_yoctonear(1))
+            .with_static_gas(Gas::from_gas(30 * TGAS))
             .nft_transfer(buyer.clone(), listing.token_id.clone(), None, None)
             .then(
                 ext_self::ext(env::current_account_id())
-                    .with_static_gas(Gas(10 * TGAS))
+                    .with_static_gas(Gas::from_gas(10 * TGAS))
                     .on_nft_transfer(key, buyer, listing.price),
             )
     }
@@ -140,8 +139,8 @@ impl Marketplace {
         let fee = price * self.fee_bps as u128 / 10_000;
         let seller_payout = price - fee;
 
-        Promise::new(listing.seller.clone()).transfer(seller_payout);
-        Promise::new(self.owner_id.clone()).transfer(fee);
+        Promise::new(listing.seller.clone()).transfer(near_sdk::NearToken::from_yoctonear(seller_payout));
+        Promise::new(self.owner_id.clone()).transfer(near_sdk::NearToken::from_yoctonear(fee));
         log!("sale: seller gets {} yN, fee {} yN", seller_payout, fee);
     }
 

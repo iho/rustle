@@ -1,8 +1,6 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{assert_one_yocto, env, near_bindgen, require, AccountId};
+use near_sdk::{assert_one_yocto, env, near, near_bindgen, require, AccountId};
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct Contract {
     owner_id: AccountId,
     fee_rate: u32,
@@ -11,7 +9,7 @@ pub struct Contract {
 impl Default for Contract {
     fn default() -> Self {
         Self {
-            owner_id: AccountId::new_unchecked("owner.near".to_string()),
+            owner_id: "owner.near".parse().unwrap(),
             fee_rate: 0,
         }
     }

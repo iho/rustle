@@ -5,9 +5,9 @@
 ///   - timestamp        in `get_return` (uses block_timestamp for fee tier)
 ///   - reentrancy       in `swap`       (state updated after cross-contract call)
 use near_contract_standards::fungible_token::core::ext_ft_core;
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::U128;
-use near_sdk::{env, ext_contract, log, near_bindgen, AccountId, Gas, Promise, PromiseResult};
+use near_sdk::{env, ext_contract, log, near, near_bindgen, AccountId, Gas, Promise, PromiseResult};
 
 pub const TGAS: u64 = 1_000_000_000_000;
 const FEE_DENOMINATOR: u128 = 10_000;
@@ -27,8 +27,7 @@ pub struct Pool {
     pub fee_bps: u128,
 }
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize)]
+#[near(contract_state)]
 pub struct AmmContract {
     pub owner_id: AccountId,
     pub pools: Vec<Pool>,
@@ -97,12 +96,12 @@ impl AmmContract {
 
         // Send token_b to caller before updating reserves (reentrancy window).
         ext_ft_core::ext(token_b)
-            .with_attached_deposit(1)
-            .with_static_gas(Gas(30 * TGAS))
+            .with_attached_deposit(near_sdk::NearToken::from_yoctonear(1))
+            .with_static_gas(Gas::from_gas(30 * TGAS))
             .ft_transfer(env::predecessor_account_id(), amount_out, None)
             .then(
                 ext_self::ext(env::current_account_id())
-                    .with_static_gas(Gas(10 * TGAS))
+                    .with_static_gas(Gas::from_gas(10 * TGAS))
                     .on_swap_complete(pool_id, self.pools[pool_id as usize].token_a.clone(), amount_in, amount_out),
             )
     }

@@ -149,8 +149,10 @@ fn main() {
                     continue;
                 }
                 eprintln!("\x1b[33m[*] Find nft_transfer {}\x1b[0m", func.name());
-                // approval_id is arg index 3 (self=0, receiver_id=1, token_id=2, approval_id=3, memo=4, ...)
-                let ok = has_approval_check(func, 3, 5, &mut HashSet::new());
+                // near-sdk 5: AccountId = Arc<str> → (ptr, len) = 2 params.
+                // nft_transfer(self=0, receiver_id.ptr=1, receiver_id.len=2, token_id=3,
+                //              approval_id.0=4, approval_id.1=5, memo=6)
+                let ok = has_approval_check(func, 4, 5, &mut HashSet::new());
                 writer.write_bool(func.name(), ok);
             } else if re_nft_transfer_call.is_match(func.name()) {
                 if func.param_count() < 7 {
@@ -160,8 +162,10 @@ fn main() {
                     "\x1b[33m[*] Find nft_transfer_call {}\x1b[0m",
                     func.name()
                 );
-                // approval_id is arg index 4 (self=0, receiver_id=1, token_id=2, approval_id=3... wait C++ uses 4)
-                let ok = has_approval_check(func, 4, 5, &mut HashSet::new());
+                // nft_transfer_call has sret return + same layout:
+                // (sret=0, self=1, receiver_id.ptr=2, receiver_id.len=3, token_id=4,
+                //  approval_id.0=5, approval_id.1=6, memo=7, msg=8)
+                let ok = has_approval_check(func, 5, 5, &mut HashSet::new());
                 writer.write_bool(func.name(), ok);
             }
         }

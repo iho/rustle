@@ -1,4 +1,4 @@
 "file","name","high","medium","low","info"
-"src/lib.rs","add_users",,,"call to <add_single_user(L38)> with unused return value;",
-"src/lib.rs","remove_users",,,"call to <remove_single_user(L44)> with unused return value;",
+"src/lib.rs","add_users",,,"call to <add_single_user(L37)> with unused return value;",
+"src/lib.rs","remove_users",,,"call to <remove_single_user(L43)> with unused return value;",
 "global","global",,,"No upgrade function found;",
