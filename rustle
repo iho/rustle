@@ -194,15 +194,17 @@ _arg_detector=$(echo $_arg_detector | $SED 's/\bhigh\b/unhandled-promise,non-pri
 _arg_detector=$(echo $_arg_detector | $SED 's/\bmedium\b/div-before-mul,round,lock-callback,yocto-attach,dup-collection-id,unregistered-receiver/g')
 _arg_detector=$(echo $_arg_detector | $SED 's/\blow\b/prepaid-gas,non-callback-private,unused-ret,upgrade-func,tautology,storage-gas,unclaimed-storage-fee/g')
 _arg_detector=$(echo $_arg_detector | $SED 's/\binfo\b/inconsistency,timestamp,ext-call,promise-result,transfer,complex-loop,public-interface/g')
-_arg_detector=$(echo $_arg_detector | $SED 's/\bnep-interface\b/nep141-interface,nep145-interface,nep148-interface,nep171-interface,nep177-interface,nep178-interface,nep181-interface,nep245-interface/g')
+_arg_detector=$(echo $_arg_detector | $SED 's/\bnep-interface\b/nep141-interface,nep145-interface,nep148-interface,nep171-interface,nep177-interface,nep178-interface,nep181-interface,nep199-interface,nep245-interface,nep246-interface,nep330-interface/g')
 
 # expand by NEP type
 ## NEP141
-_arg_detector=$(echo $_arg_detector | $SED 's/\bnep-ft\b/nep141-interface,self-transfer,unregistered-receiver/g')
+_arg_detector=$(echo $_arg_detector | $SED 's/\bnep-ft\b/nep141-interface,nep148-interface,self-transfer,unregistered-receiver/g')
 ## NEP145
 _arg_detector=$(echo $_arg_detector | $SED 's/\bnep-storage\b/nep145-interface,unclaimed-storage-fee/g')
-## NEP171,NEP178
-_arg_detector=$(echo $_arg_detector | $SED 's/\bnep-nft\b/nep171-interface,nft-approval-check,nft-owner-check/g')
+## NEP171,NEP177,NEP178,NEP181,NEP199
+_arg_detector=$(echo $_arg_detector | $SED 's/\bnep-nft\b/nep171-interface,nep177-interface,nep178-interface,nep181-interface,nep199-interface,nft-approval-check,nft-owner-check/g')
+## NEP245,NEP246
+_arg_detector=$(echo $_arg_detector | $SED 's/\bnep-mt\b/nep245-interface,nep246-interface/g')
 
 # run audit
 

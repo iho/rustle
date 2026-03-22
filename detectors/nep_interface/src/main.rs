@@ -23,11 +23,12 @@ fn positional_funcs() -> HashMap<u32, Vec<&'static str>> {
     m.insert(177, vec!["nft_metadata"]);
     m.insert(178, vec!["nft_approve", "nft_revoke", "nft_revoke_all", "nft_is_approved"]);
     m.insert(181, vec!["nft_total_supply", "nft_tokens", "nft_supply_for_owner", "nft_tokens_for_owner"]);
-    m.insert(199, vec![]);
+    m.insert(199, vec!["nft_payout", "nft_transfer_payout"]);
     m.insert(245, vec!["mt_transfer", "mt_batch_transfer", "mt_transfer_call", "mt_batch_transfer_call",
                        "mt_token", "mt_balance_of", "mt_batch_balance_of", "mt_supply", "mt_batch_supply"]);
+    m.insert(246, vec!["mt_metadata"]);
     m.insert(297, vec![]);
-    m.insert(330, vec![]);
+    m.insert(330, vec!["contract_source_metadata"]);
     m.insert(366, vec![]);
     m
 }
